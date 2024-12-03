@@ -6,7 +6,7 @@ from math import sqrt, sin, cos, pi, degrees
 from time import sleep
 
 class GraphVertex:
-    RADIUS = 10
+    RADIUS = 30
 
     def __init__(self, name, point, fake=False):
         self.name = name
@@ -14,7 +14,7 @@ class GraphVertex:
         self.fake = fake
 
 class GraphEdge:
-    ARROW_SIZE = 10
+    ARROW_SIZE = 20
 
     def __init__(self, vertex1, vertex2, capacity=None, flow=None):
         self.source = vertex1
@@ -48,9 +48,7 @@ class GraphEdge:
         if vertex2.fake:
             self.point2 = (x2, y2)
             self.fake = True
-        #self.create_line(point1 + point2)
         self.textPoint = ((x1 * 2 + x2) // 3, (y1 * 2 + y2) // 3)
-        # TODO textPoint
 
     def setRed(self, red=True):
         self.red = red
@@ -63,7 +61,6 @@ class GraphGenerator:
         for vertex in flownetwork.adj:
             path = flownetwork.maxLength_path(vertex, sink)
             L[vertex] = (len(path), path)
-        #print(L)
         return L
 
     @staticmethod
@@ -73,13 +70,9 @@ class GraphGenerator:
         vertexByNames = {}
         edges = []
 
-        LEFT_MARGIN = 90
-        VMARGIN = 70
+        LEFT_MARGIN = 180
+        VMARGIN = 140
         MIDDLE = (LEFT_MARGIN, height // 2)
-
-        # sourceVertex = GraphVertex(source, MIDDLE)
-        # vertexNames.append(source)
-        # vertices.append(sourceVertex)
 
         def coordGenerator(level):
             x = (level + 1) * LEFT_MARGIN
@@ -103,18 +96,12 @@ class GraphGenerator:
 
         maxLevel = max(levels.keys())
 
-        # print(L)
-
         levelNames = list(levels.keys())
         levelNames.sort(reverse=True)
-
-        # добавить фиктивные вершины
 
         queue = []
         for level in levelNames:
             queue.append(levels[level])
-
-        # print(queue)
 
         pointCoords = {}
         for index, level in zip(range(len(queue)), queue):
@@ -126,18 +113,6 @@ class GraphGenerator:
                 vertices.append(currentVertex)
                 vertexByNames[vertex] = currentVertex
 
-
-                # print(edge)
-                # if edge.reverse:
-                #     continue
-                # newVertexName = edge.sink
-                # if not newVertexName in vertexNames:
-                #     newVertex = GraphVertex(newVertexName, next(point))
-                #     vertexNames.append(newVertexName)
-                #     vertices.append(newVertex)
-                # print(currentVertex.name, currentVertex.point, newVertex.name, newVertex.point, edge.capacity)
-                # edges.append(GraphEdge(currentVertex, newVertex, edge.capacity))
-
         for vertex in vertices:
             for edge in flownetwork.get_edges(vertex.name):
                 if edge.reverse:
@@ -148,7 +123,6 @@ class GraphGenerator:
 
                 fakePath = []
                 if abs(beginLevel - endLevel) > 1:
-                    # добавить фиктивную вершину
                     if beginLevel > endLevel:
                         beginLevel, endLevel = endLevel, beginLevel
                     for i in range(beginLevel + 1, endLevel):
@@ -187,39 +161,17 @@ class GraphGenerator:
 class GraphCanvas(Canvas):
 
     def __init__(self, parent, flownetwork=None):
-        super().__init__(parent, width=640, height=480)
+        super().__init__(parent, width=1500, height=800)
         self.vertices = []
         self.edges = []
-        # self._testInit()
         if flownetwork is not None:
             self.setFlowNetwork(flownetwork)
         self.draw()
 
     def setFlowNetwork(self, flownetwork, path=[]):
-        (self.vertices, self.edges) = GraphGenerator.fromFlowNetwork(flownetwork, 's', 't', (640, 480), path)
+        (self.vertices, self.edges) = GraphGenerator.fromFlowNetwork(flownetwork, 's', 't', (1920, 1080), path)
         self.draw()
 
-    def _testInit(self):
-        self.add_vertex(GraphVertex(1, (300, 300)))
-        angle = 0
-        n = 2
-        angles = []
-        while angle < 2 * pi:
-            self.add_vertex(GraphVertex(n, (300 + 100 * cos(angle), 300 + 100 * sin(angle))))
-            n += 1
-            angles.append(angle)
-            angle += pi / 6
-        angles = map(lambda x : round(degrees(x)), angles)
-        for vertex in self.vertices[1:]:
-            self.add_edge(
-                GraphEdge(self.vertices[0], vertex, next(angles))
-            )
-
-    def add_vertex(self, vertex):
-        self.vertices.append(vertex)
-
-    def add_edge(self, edge):
-        self.edges.append(edge)
 
     def draw(self):
         self.delete("all")
@@ -227,18 +179,21 @@ class GraphCanvas(Canvas):
             self._draw_vertex(vertex)
         for edge in self.edges:
             self._draw_edge(edge)
+        # for edge in self.min_cut_edges:
+        #     self._draw_min_cut_edge(edge)
 
     def _draw_vertex(self, vertex):
         radius = GraphVertex.RADIUS
         (x, y) = vertex.point
         self.create_oval((x - radius, y - radius, x + radius, y + radius))
-        self.create_text(vertex.point, text=vertex.name)
+        self.create_text(vertex.point, text=vertex.name,font=("Helvetica", 20, "bold"))
 
     def _draw_edge(self, edge):
-        VPADDING = 7
-        PADDING = 17
+        VPADDING = 14
+        PADDING = 34
 
-        color = "red" if edge.red else "systemTextColor"
+        # Fix: Changed color to a valid name "black" instead of "systemTextColor"
+        color = "red" if edge.red else "black"
 
         if edge.fake:
             self.create_line(edge.point1 + edge.point2, fill=color)
@@ -246,9 +201,10 @@ class GraphCanvas(Canvas):
             self.create_line(edge.point1 + edge.point2, fill=color, arrow=LAST)
         if not edge.capacity is None:
             (x, y) = edge.textPoint
-            self.create_rectangle((x - PADDING, y  - VPADDING, x + PADDING, y + VPADDING), fill=self['background'])
+            self.create_rectangle((x - PADDING, y - VPADDING, x + PADDING, y + VPADDING), fill=self['background'])
             text = "{}/{}".format(edge.flow, edge.capacity)
-            self.create_text(edge.textPoint, text=text)
+            self.create_text(edge.textPoint, text=text, font=("Helvetica", 20, "bold"))
+
 
 if __name__ == "__main__":
     root = Tk()
@@ -288,9 +244,15 @@ if __name__ == "__main__":
             stepBtn['state'] = NORMAL
             answerLbl['text'] = ""
 
-    openBtn = Button(root, text="Open", command=onOpenBtnClicked)
-    openBtn.pack()
 
+   
+
+    openBtn = Button(root, text="Open", command=onOpenBtnClicked,
+                    width=20, height=2, font=("Helvetica", 12, "bold"),
+                    bg="#4CAF50", fg="white", relief="solid")
+    openBtn.pack(padx=10, pady=10)
+
+ 
     def onStepBtnClicked():
         ans = None
         try:
@@ -301,12 +263,15 @@ if __name__ == "__main__":
 
             nw, p = value
             canvas.setFlowNetwork(nw, p)
-        except StopIteration:
-            stepBtn['state']=DISABLED
-            answerLbl['text'] = "Answer: " + str(ans)
 
-    stepBtn = Button(root, text="Step", command=onStepBtnClicked)
-    stepBtn.pack()
+          
+        except StopIteration:
+            stepBtn['state'] = DISABLED
+            answerLbl['text'] = "Answer: " + str(ans) + ",  Min Cut: " 
+            answerLbl.config(font=("Helvetica", 30, "bold"))
+
+    stepBtn = Button(root, text="Step", command=onStepBtnClicked, width=20, height=2, font=("Helvetica", 12),bg="#4CAF50", fg="white", relief="solid")
+    stepBtn.pack(padx=10, pady=10)
     answerLbl = Label(root)
     answerLbl.pack()
     root.mainloop()
